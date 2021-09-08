@@ -71,6 +71,9 @@ export default class CompleteSecurity extends React.Component<IProps, IState> {
         } else if (phase === Phase.Busy) {
             icon = <span className="mx_CompleteSecurity_headerIcon mx_E2EIcon_warning" />;
             title = _t("Verify this login");
+        } else if (phase === Phase.LostKeys) {
+            icon = <span className="mx_CompleteSecurity_headerIcon mx_E2EIcon_warning" />;
+            title = _t("Unable to verify this login");
         } else {
             throw new Error(`Unknown phase ${phase}`);
         }

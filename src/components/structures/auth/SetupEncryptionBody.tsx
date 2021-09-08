@@ -19,6 +19,8 @@ import { _t } from '../../../languageHandler';
 import { MatrixClientPeg } from '../../../MatrixClientPeg';
 import Modal from '../../../Modal';
 import VerificationRequestDialog from '../../views/dialogs/VerificationRequestDialog';
+import InteractiveAuthDialog from '../../views/dialogs/InteractiveAuthDialog';
+import ConfirmDestroyCrossSigningDialog from '../../views/dialogs/security/ConfirmDestroyCrossSigningDialog';
 import { SetupEncryptionStore, Phase } from '../../../stores/SetupEncryptionStore';
 import { replaceableComponent } from "../../../utils/replaceableComponent";
 import { ISecretStorageKeyInfo } from 'matrix-js-sdk/src/crypto/api';
@@ -103,6 +105,41 @@ export default class SetupEncryptionBody extends React.Component<IProps, IState>
         });
     };
 
+    private onResetClick = (ev: React.MouseEvent<HTMLAnchorElement>) => {
+        ev.preventDefault();
+        Modal.createDialog(ConfirmDestroyCrossSigningDialog, {
+            onFinished: (act) => {
+                if (!act) return;
+                this.resetCrossSigning();
+            },
+        });
+    };
+
+    private resetCrossSigning = async (): Promise<void> => {
+        try {
+            const cli = MatrixClientPeg.get();
+            await cli.bootstrapCrossSigning({
+                authUploadDeviceSigningKeys: async (makeRequest) => {
+                    const { finished } = Modal.createTrackedDialog(
+                        'Cross-signing keys dialog', '', InteractiveAuthDialog,
+                        {
+                            title: _t("Setting up keys"),
+                            matrixClient: cli,
+                            makeRequest,
+                        },
+                    );
+                    const [confirmed] = await finished;
+                    if (confirmed) {
+                        this.props.onFinished(true);
+                    }
+                },
+                setupNewCrossSigning: true,
+            });
+        } catch (e) {
+            console.error("Error resetting cross-signing", e);
+        }
+    };
+
     private onSkipClick = () => {
         const store = SetupEncryptionStore.sharedInstance();
         store.skip();
@@ -151,7 +188,7 @@ export default class SetupEncryptionBody extends React.Component<IProps, IState>
 
             let useRecoveryKeyButton;
             if (recoveryKeyPrompt) {
-                useRecoveryKeyButton = <AccessibleButton kind="link" onClick={this.onUsePassphraseClick}>
+                useRecoveryKeyButton = <AccessibleButton kind="primary" onClick={this.onUsePassphraseClick}>
                     { recoveryKeyPrompt }
                 </AccessibleButton>;
             }
@@ -173,6 +210,33 @@ export default class SetupEncryptionBody extends React.Component<IProps, IState>
                         { verifyButton }
                         { useRecoveryKeyButton }
                         <AccessibleButton kind="danger" onClick={this.onSkipClick}>
+                            { _t("Skip") }
+                        </AccessibleButton>
+                    </div>
+                    <div className="mx_SetupEncryptionBody_reset">
+                        { _t("Forgotten or lost all recovery methods? <a>Reset all</a>", null, {
+                            a: (sub) => <a
+                                href=""
+                                onClick={this.onResetClick}
+                                className="mx_SetupEncryptionBody_reset_link">{ sub }</a>,
+                        }) }
+                    </div>
+                </div>
+            );
+        } else if (phase === Phase.LostKeys) {
+            return (
+                <div>
+                    <p>{ _t(
+                        "It looks like you don't have a Security Key or any other devices you can " +
+                        "verify against.  In order to verify your identity on this device, you'll " +
+                        "need to reset your verification keys.",
+                    ) }</p>
+
+                    <div className="mx_CompleteSecurity_actionRow">
+                        <AccessibleButton kind="danger" onClick={this.onResetClick}>
+                            { _t("Reset verification") }
+                        </AccessibleButton>
+                        <AccessibleButton kind="danger_outline" onClick={this.onSkipClick}>
                             { _t("Skip") }
                         </AccessibleButton>
                     </div>

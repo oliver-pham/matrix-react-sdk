@@ -30,6 +30,7 @@ export enum Phase {
     Done = 3, // final done stage, but still showing UX
     ConfirmSkip = 4,
     Finished = 5, // UX can be closed
+    LostKeys = 6, // All cross-signed devices have been lost, and there's no stored backup key
 }
 
 export class SetupEncryptionStore extends EventEmitter {
@@ -101,17 +102,24 @@ export class SetupEncryptionStore extends EventEmitter {
             this.keyInfo = keys[this.keyId];
         }
 
-        // do we have any other devices which are E2EE which we can verify against?
+        // do we have any other verified devices which are E2EE which we can verify against?
         const dehydratedDevice = await cli.getDehydratedDevice();
-        this.hasDevicesToVerifyAgainst = cli.getStoredDevicesForUser(cli.getUserId()).some(
+        const ownUserId = cli.getUserId();
+        const crossSigningInfo = cli.getStoredCrossSigningForUser(ownUserId);
+        this.hasDevicesToVerifyAgainst = cli.getStoredDevicesForUser(ownUserId).some(
             device =>
                 device.getIdentityKey() &&
-                (!dehydratedDevice || (device.deviceId != dehydratedDevice.device_id)),
+                (!dehydratedDevice || (device.deviceId != dehydratedDevice.device_id)) &&
+                crossSigningInfo.checkDeviceTrust(
+                    crossSigningInfo,
+                    device,
+                    false,
+                    true,
+                ).isCrossSigningVerified(),
         );
 
         if (!this.hasDevicesToVerifyAgainst && !this.keyInfo) {
-            // skip before we can even render anything.
-            this.phase = Phase.Finished;
+            this.phase = Phase.LostKeys;
         } else {
             this.phase = Phase.Intro;
         }
