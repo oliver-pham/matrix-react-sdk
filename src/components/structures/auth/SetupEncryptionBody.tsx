@@ -129,12 +129,13 @@ export default class SetupEncryptionBody extends React.Component<IProps, IState>
                         },
                     );
                     const [confirmed] = await finished;
-                    if (confirmed) {
-                        this.props.onFinished(true);
+                    if (!confirmed) {
+                        throw new Error("Cross-signing key upload auth canceled");
                     }
                 },
                 setupNewCrossSigning: true,
             });
+            this.props.onFinished(true);
         } catch (e) {
             console.error("Error resetting cross-signing", e);
         }
