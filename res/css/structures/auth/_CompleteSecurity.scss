@@ -17,6 +17,14 @@ limitations under the License.
 .mx_CompleteSecurity_header {
     display: flex;
     align-items: center;
+
+    a.mx_CompleteSecurity_skip:is(:link, :hover, :visited) {
+        color: $light-fg-color;
+        font-size: $font-14px;
+        font-weight: normal;
+        position: absolute;
+        right: 18px;
+    }
 }
 
 .mx_CompleteSecurity_headerIcon {

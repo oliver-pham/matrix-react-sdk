@@ -22,6 +22,9 @@ import { PHASE_DONE as VERIF_PHASE_DONE } from "matrix-js-sdk/src/crypto/verific
 
 import { MatrixClientPeg } from '../MatrixClientPeg';
 import { accessSecretStorage, AccessCancelledError } from '../SecurityManager';
+import Modal from '../Modal';
+import InteractiveAuthDialog from '../components/views/dialogs/InteractiveAuthDialog';
+import { _t } from '../languageHandler';
 
 export enum Phase {
     Loading = 0,
@@ -30,7 +33,7 @@ export enum Phase {
     Done = 3, // final done stage, but still showing UX
     ConfirmSkip = 4,
     Finished = 5, // UX can be closed
-    LostKeys = 6, // All cross-signed devices have been lost, and there's no stored backup key
+    ConfirmReset = 6,
 }
 
 export class SetupEncryptionStore extends EventEmitter {
@@ -118,11 +121,7 @@ export class SetupEncryptionStore extends EventEmitter {
                 ).isCrossSigningVerified(),
         );
 
-        if (!this.hasDevicesToVerifyAgainst && !this.keyInfo) {
-            this.phase = Phase.LostKeys;
-        } else {
-            this.phase = Phase.Intro;
-        }
+        this.phase = Phase.Intro;
         this.emit("update");
     }
 
@@ -214,6 +213,44 @@ export class SetupEncryptionStore extends EventEmitter {
         this.emit("update");
     }
 
+    public reset(): void {
+        this.phase = Phase.ConfirmReset;
+        this.emit("update");
+    }
+
+    public async resetConfirm(): Promise<void> {
+        try {
+            const cli = MatrixClientPeg.get();
+            await cli.bootstrapCrossSigning({
+                authUploadDeviceSigningKeys: async (makeRequest) => {
+                    const { finished } = Modal.createTrackedDialog(
+                        'Cross-signing keys dialog', '', InteractiveAuthDialog,
+                        {
+                            title: _t("Setting up keys"),
+                            matrixClient: cli,
+                            makeRequest,
+                        },
+                    );
+                    const [confirmed] = await finished;
+                    if (!confirmed) {
+                        throw new Error("Cross-signing key upload auth canceled");
+                    }
+                },
+                setupNewCrossSigning: true,
+            });
+            this.phase = Phase.Finished;
+        } catch (e) {
+            console.error("Error resetting cross-signing", e);
+            this.phase = Phase.Intro;
+        }
+        this.emit("update");
+    }
+
+    public returnAfterReset(): void {
+        this.phase = Phase.Intro;
+        this.emit("update");
+    }
+
     public done(): void {
         this.phase = Phase.Finished;
         this.emit("update");
@@ -231,5 +268,9 @@ export class SetupEncryptionStore extends EventEmitter {
         await request.accept();
         request.on("change", this.onVerificationRequestChange);
         this.emit("update");
+    }
+
+    public lostKeys(): boolean {
+        return !this.hasDevicesToVerifyAgainst && !this.keyInfo;
     }
 }
