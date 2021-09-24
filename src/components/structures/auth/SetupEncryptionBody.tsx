@@ -176,9 +176,9 @@ export default class SetupEncryptionBody extends React.Component<IProps, IState>
                 const store = SetupEncryptionStore.sharedInstance();
                 let recoveryKeyPrompt;
                 if (store.keyInfo && keyHasPassphrase(store.keyInfo)) {
-                    recoveryKeyPrompt = _t("Use Security Key or Phrase");
+                    recoveryKeyPrompt = _t("Verify with Security Key or Phrase");
                 } else if (store.keyInfo) {
-                    recoveryKeyPrompt = _t("Use Security Key");
+                    recoveryKeyPrompt = _t("Verify with Security Key");
                 }
 
                 let useRecoveryKeyButton;
@@ -191,7 +191,7 @@ export default class SetupEncryptionBody extends React.Component<IProps, IState>
                 let verifyButton;
                 if (store.hasDevicesToVerifyAgainst) {
                     verifyButton = <AccessibleButton kind="primary" onClick={this.onVerifyClick}>
-                        { _t("Use another login") }
+                        { _t("Verify with another login") }
                     </AccessibleButton>;
                 }
 
@@ -267,28 +267,24 @@ export default class SetupEncryptionBody extends React.Component<IProps, IState>
                 </div>
             );
         } else if (phase === Phase.ConfirmReset) {
-            let confirmationPrompt;
-            if (lostKeys) {
-                confirmationPrompt = (
+            let warningPrompt;
+            if (!lostKeys) {
+                warningPrompt = (
                     <p>{ _t(
-                        "Resetting your verification keys cannot be undone. After resetting, " +
-                        "any friends who have previously verified you will see security warnings " +
-                        "until you re-verify with them.",
-                    ) }</p>
-                );
-            } else {
-                confirmationPrompt = (
-                    <p>{ _t(
-                        "Resetting your verification keys cannot be undone.  After resetting, " +
-                        "any friends who have previously verified you will see security warnings " +
-                        "until you re-verify with them. Please only proceed if you're sure you've " +
-                        "lost all of your other devices and your security key.",
+                        "Please only proceed if you're sure you've lost all of your other " +
+                        "devices and your security key.",
                     ) }</p>
                 );
             }
             return (
                 <div>
-                    { confirmationPrompt }
+                    <p>{ _t(
+                        "Resetting your verification keys cannot be undone. After resetting, " +
+                        "you won't have access to old encrypted messages, and any friends who " +
+                        "have previously verified you will see security warnings until you " +
+                        "re-verify with them.",
+                    ) }</p>
+                    { warningPrompt }
 
                     <div className="mx_CompleteSecurity_actionRow">
                         <AccessibleButton kind="danger" onClick={this.onResetConfirmClick}>
