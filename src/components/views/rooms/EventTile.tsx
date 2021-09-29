@@ -53,7 +53,7 @@ import SenderProfile from '../messages/SenderProfile';
 import MessageTimestamp from '../messages/MessageTimestamp';
 import TooltipButton from '../elements/TooltipButton';
 import ReadReceiptMarker from "./ReadReceiptMarker";
-import MessageActionBar, { ActionBarRenderingContext } from "../messages/MessageActionBar";
+import MessageActionBar from "../messages/MessageActionBar";
 import ReactionsRow from '../messages/ReactionsRow';
 import { getEventDisplayInfo } from '../../../utils/EventUtils';
 import { RightPanelPhases } from "../../../stores/RightPanelStorePhases";
@@ -1056,9 +1056,6 @@ export default class EventTile extends React.Component<IProps, IState> {
             }
         }
 
-        const renderingContext = this.props.tileShape === TileShape.Thread
-            ? ActionBarRenderingContext.Thread
-            : ActionBarRenderingContext.Room;
         const actionBar = !isEditing ? <MessageActionBar
             mxEvent={this.props.mxEvent}
             reactions={this.state.reactions}
@@ -1066,7 +1063,6 @@ export default class EventTile extends React.Component<IProps, IState> {
             getTile={this.getTile}
             getReplyThread={this.getReplyThread}
             onFocusChange={this.onActionBarFocusChange}
-            renderingContext={renderingContext}
             isQuoteExpanded={isQuoteExpanded}
             toggleThreadExpanded={() => this.setQuoteExpanded(!isQuoteExpanded)}
         /> : undefined;
